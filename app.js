@@ -12,7 +12,7 @@ config();
 const app = express();
 const version = "v1";
 
-console.log(process.env.FRONTEND_URL);
+//console.log(process.env.FRONTEND_URL);
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,

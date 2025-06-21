@@ -8,6 +8,9 @@ export const activityLabelEnums = [
   "ADD_STUDENTS",
   "GET_RATINGS_GRAPH_DATA",
   "GET_CONTESTS_LIST_DATA",
+  "GET_SUBMISSION_DATA",
+  "GET_SUBMISSION_BARCHART",
+  "GET_SUBMISSION_HEATMAP",
 ];
 
 export const userRoles = ["ADMIN", "STAFF"];

@@ -3,6 +3,7 @@ import {
   contestsListReqSchema,
   ratingsGraphReqSchema,
   studentsListReqSchema,
+  submissionStatsReqSchema,
 } from "../helpers/joi_validations/students.joi.js";
 import {
   logActivity,
@@ -13,6 +14,9 @@ import {
   contestsListHandler,
   getStudentListHandler,
   ratingsGraphHandler,
+  submissionBarChartHandler,
+  submissionHeatMapHandler,
+  submissionStatsHandler,
 } from "../services/students.service.js";
 
 export const getStudentsList = async (req, res, next) => {
@@ -113,6 +117,90 @@ export const contestsList = async (req, res, next) => {
     return res.status(200).json(finalResponse);
   } catch (error) {
     console.error("Error while fetching ratings graph :: ratingsGraph()");
+    next(error);
+  }
+};
+
+export const getStudentStats = async (req, res, next) => {
+  try {
+    // Raw request logging
+    const activitylog = await logActivity(req, "GET_SUBMISSION_DATA", req.body);
+    // Schematic validation
+    const payload = await submissionStatsReqSchema.validateAsync(req.body);
+    // Data fields extraction
+    const { studentId, dateRange } = payload;
+    // Logic
+    const result = await submissionStatsHandler(studentId, dateRange);
+    // Construct final response
+    const finalResponse = {
+      error: false,
+      data: result,
+    };
+    // Update response in log
+    await updateActivityLogResponse(activitylog._id, finalResponse);
+    return res.status(200).json(finalResponse);
+  } catch (error) {
+    console.error("Error while getting stats :: studentStats()");
+    next(error);
+  }
+};
+
+export const getSubmissionBarChart = async (req, res, next) => {
+  try {
+    // Raw request logging
+    const activitylog = await logActivity(
+      req,
+      "GET_SUBMISSION_BARCHART",
+      req.body
+    );
+    // Schematic validation
+    const payload = await submissionStatsReqSchema.validateAsync(req.body);
+    // Data fields extraction
+    const { studentId, dateRange } = payload;
+    // Logic
+    const result = await submissionBarChartHandler(studentId, dateRange);
+    // Construct final response
+    const finalResponse = {
+      error: false,
+      data: result,
+    };
+    // Update response in log
+    await updateActivityLogResponse(activitylog._id, finalResponse);
+    return res.status(200).json(finalResponse);
+  } catch (error) {
+    console.error(
+      "Error while fetching submission BarChart :: getSubmissionBarChart()"
+    );
+    next(error);
+  }
+};
+
+export const getSubmissionHeatMap = async (req, res, next) => {
+  try {
+    // Raw request logging
+    const activitylog = await logActivity(
+      req,
+      "GET_SUBMISSION_HEATMAP",
+      req.body
+    );
+    // Schematic validation
+    const payload = await submissionStatsReqSchema.validateAsync(req.body);
+    // Data fields extraction
+    const { studentId, dateRange } = payload;
+    // Logic
+    const result = await submissionHeatMapHandler(studentId, dateRange);
+    // Construct final response
+    const finalResponse = {
+      error: false,
+      data: result,
+    };
+    // Update response in log
+    await updateActivityLogResponse(activitylog._id, finalResponse);
+    return res.status(200).json(finalResponse);
+  } catch (error) {
+    console.error(
+      "Error while fetching submission HeatMap :: getSubmissionHeatMap()"
+    );
     next(error);
   }
 };

@@ -302,3 +302,198 @@ export const contestsListHandler = async (studentId, dateRange, pagination) => {
     throw error;
   }
 };
+
+export const submissionStatsHandler = async (studentId, dateRange) => {
+  try {
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const fromTimestamp = nowInSeconds - dateRange * 24 * 60 * 60;
+    const baseMatch = {
+      studentId: studentId,
+      creationTimeSeconds: { $gte: fromTimestamp },
+    };
+    const solvedMatch = { ...baseMatch, verdict: "OK" };
+    const totalProblemSolved = await cfSubmissionInfoModel.countDocuments(
+      solvedMatch
+    );
+
+    const averageProblemPerDay = Number(
+      (totalProblemSolved / dateRange).toFixed(2)
+    );
+
+    const mostDifficultSolvedProblem = await cfSubmissionInfoModel.aggregate([
+      {
+        $match: solvedMatch,
+      },
+      { $sort: { "problem.rating": -1 } },
+      {
+        $limit: 1,
+      },
+      {
+        $project: {
+          "problem.name": 1,
+          "problem.rating": 1,
+        },
+      },
+    ]);
+
+    const avgRating = await cfSubmissionInfoModel.aggregate([
+      {
+        $match: solvedMatch,
+      },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$problem.rating" },
+        },
+      },
+    ]);
+
+    return {
+      totalProblemSolved,
+      averageProblemPerDay,
+      mostDifficultSolvedProblem:
+        mostDifficultSolvedProblem[0]?.problem || null,
+      avgRating: avgRating[0]?.avgRating || 0,
+    };
+  } catch (error) {
+    console.error(
+      "Error while handling Submissions data request :: submissionStatsHandler()"
+    );
+    throw error;
+  }
+};
+
+export const submissionBarChartHandler = async (studentId, dateRange) => {
+  try {
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const fromTimestamp = nowInSeconds - dateRange * 24 * 60 * 60;
+
+    // Get Min Rating
+    const minDoc = await cfSubmissionInfoModel
+      .findOne({
+        studentId: studentId,
+        creationTimeSeconds: { $gte: fromTimestamp },
+        verdict: "OK",
+        "problem.rating": { $exists: true },
+      })
+      .sort({ "problem.rating": 1 })
+      .limit(1);
+
+    // Get Max Rating
+    const maxDoc = await cfSubmissionInfoModel
+      .findOne({
+        studentId: studentId,
+        creationTimeSeconds: { $gte: fromTimestamp },
+        verdict: "OK",
+        "problem.rating": { $exists: true },
+      })
+      .sort({ "problem.rating": -1 })
+      .limit(1);
+
+    const minRating = minDoc?.problem?.rating ?? 800;
+    const maxRating = maxDoc?.problem?.rating ?? 2000;
+
+    const bucketSize = 200; // Define the size of each rating bucket dynamically
+    const buckets = [];
+
+    // Generate dynamic buckets from min to max rating
+    for (
+      let start = Math.floor(minRating / bucketSize) * bucketSize;
+      start <= maxRating;
+      start += bucketSize
+    ) {
+      buckets.push({
+        min: start,
+        max: start + bucketSize - 1,
+        label: `${start}-${start + bucketSize - 1}`,
+        count: 0,
+      });
+    }
+
+    // Aggregate rating counts grouped by problem.rating
+    const ratingData = await cfSubmissionInfoModel.aggregate([
+      {
+        $match: {
+          studentId: studentId,
+          creationTimeSeconds: { $gte: fromTimestamp },
+          verdict: "OK",
+          "problem.rating": { $exists: true },
+        },
+      },
+      {
+        $group: {
+          _id: "$problem.rating",
+          problemsSolved: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Fill each rating into the correct bucket
+    ratingData.forEach(({ _id: rating, problemsSolved }) => {
+      const bucket = buckets.find((b) => rating >= b.min && rating <= b.max);
+      if (bucket) {
+        bucket.count += problemsSolved;
+      }
+    });
+
+    // Format the final result
+    const result = buckets.map((b) => ({
+      ratingBucket: b.label,
+      problemsSolved: b.count,
+    }));
+
+    return result;
+  } catch (error) {
+    console.error(
+      "Error while fetching submission bar chart :: submissionBarChartHandler()",
+      error
+    );
+    throw error;
+  }
+};
+
+export const submissionHeatMapHandler = async (studentId, dateRange) => {
+  try {
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const fromTimestamp = nowInSeconds - dateRange * 24 * 60 * 60;
+
+    const heatmap = await cfSubmissionInfoModel.aggregate([
+      {
+        $match: {
+          studentId,
+          creationTimeSeconds: { $gte: fromTimestamp },
+        },
+      },
+      {
+        $project: {
+          date: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: { $toDate: { $multiply: ["$creationTimeSeconds", 1000] } },
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$date",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          date: "$_id",
+          count: 1,
+        },
+      },
+    ]);
+    return heatmap;
+  } catch (error) {
+    console.error(
+      "Error while fetching submission HeatMap :: submissionHeatMapHandler()",
+      error
+    );
+    throw error;
+  }
+};

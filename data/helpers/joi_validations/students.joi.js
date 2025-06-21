@@ -56,3 +56,8 @@ export const contestsListReqSchema = Joi.object({
   dateRange: Joi.number().max(3650).required(),
   pagination: paginationSchema.required(),
 }).required();
+
+export const submissionStatsReqSchema = Joi.object({
+  studentId: objectIdSchema.required(),
+  dateRange: Joi.number().max(3650).required(),
+}).required();
