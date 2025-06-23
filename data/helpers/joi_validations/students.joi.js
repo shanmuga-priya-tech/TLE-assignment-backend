@@ -46,6 +46,10 @@ const objectIdSchema = Joi.custom((value, helpers) => {
   return helpers.error("any.invalid");
 });
 
+export const getStudentInfoReqSchema = Joi.object({
+  studentId: objectIdSchema.required(),
+}).required();
+
 export const ratingsGraphReqSchema = Joi.object({
   studentId: objectIdSchema.required(),
   dateRange: Joi.number().max(3650).required(),

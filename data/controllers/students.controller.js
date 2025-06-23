@@ -65,6 +65,66 @@ export const addStudents = async (req, res, next) => {
   }
 };
 
+export const getStudentInfo = async (req, res, next) => {
+  try {
+    // Raw request logging
+    const activitylog = await logActivity(req, "GET_STUDENT", req.body);
+    // Schematic validation
+    const payload = await getStudentInfoReqSchema.validateAsync(req.body);
+    // Data fields extraction
+    const { studentId } = payload;
+    // Logic
+    const result = await getStudentInfoHandler(studentId);
+    // Construct final response
+    const finalResponse = {
+      error: false,
+      data: result,
+    };
+    // Update response in log
+    await updateActivityLogResponse(activitylog._id, finalResponse);
+    return res.status(200).json(finalResponse);
+  } catch (error) {
+    console.error("Error while getting student info :: getStudentInfo()");
+    next(error);
+  }
+};
+
+export const updateStudent = async (req, res, next) => {
+  try {
+    // Raw request logging
+    const activitylog = await logActivity(req, "UPDATE_STUDENT_INFO", req.body);
+    // Schematic validation
+    const payload = await updateStudentReqSchema.validateAsync(req.body);
+    // Data fields extraction
+    const {
+      studentId,
+      studentName,
+      studentEmail,
+      studentPhone,
+      studentCFHandle,
+    } = payload;
+    // Logic
+    const result = await updateStudentInfoHandler(
+      studentId,
+      studentName,
+      studentEmail,
+      studentPhone,
+      studentCFHandle
+    );
+    // Construct final response
+    const finalResponse = {
+      error: false,
+      data: result,
+    };
+    // Update response in log
+    await updateActivityLogResponse(activitylog._id, finalResponse);
+    return res.status(200).json(finalResponse);
+  } catch (error) {
+    console.error("Error while updating students :: updateStudent()");
+    next(error);
+  }
+};
+
 export const ratingsGraph = async (req, res, next) => {
   try {
     // Raw request logging
